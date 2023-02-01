@@ -1,0 +1,128 @@
+---
+# tasks file for docker-tls
+- name: Create a SSL directory
+  ansible.builtin.file:
+    path: "{{ server_certificate_path }}"
+    state: directory
+    recurse: true
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Generate certificate authority private key
+  ansible.builtin.command: >
+    openssl genrsa -aes256 \
+    -passout pass:{{ privatekey_passphrase }} \
+    -out {{ server_certificate_path }}/ca-key.pem 4096
+
+- name: Generate certificate authority certificate
+  ansible.builtin.command: >
+    openssl req -new -x509 -days 365 \
+    -key {{ server_certificate_path }}/ca-key.pem -sha256 \
+    -out {{ server_certificate_path }}/ca.pem \
+    -passin pass:{{ privatekey_passphrase }} \
+    -subj '/C={{ country }}/ST={{ state_or_province }}/L={{ locality }}/O={{ organization }}/OU={{ organizational_unit_name }}/CN={{ docker_tls.hostname }}'
+
+- name: Create server key
+  ansible.builtin.command: >
+    openssl genrsa -out {{ server_certificate_path }}/server-key.pem 4096
+
+- name: Create server CSR
+  ansible.builtin.command: >
+    openssl req -subj '/CN={{ docker_tls.hostname }}' -sha256 \
+    -new -key {{ server_certificate_path }}/server-key.pem \
+    -out {{ server_certificate_path }}/server.csr
+
+- name: Create extfile
+  ansible.builtin.template:
+    src: extfile.cnf.j2
+    dest: "{{ server_certificate_path }}/extfile.cnf"
+    mode: 0644
+
+- name: Create server certificate
+  ansible.builtin.command: >
+    openssl x509 -req -days 365 -sha256 -in {{ server_certificate_path }}/server.csr \
+    -CA {{ server_certificate_path }}/ca.pem \
+    -CAkey {{ server_certificate_path }}/ca-key.pem \
+    -CAcreateserial -out {{ server_certificate_path }}/server-cert.pem \
+    -extfile {{ server_certificate_path }}/extfile.cnf \
+    -passin pass:{{ privatekey_passphrase }}
+
+- name: Set file permissions 
+  ansible.builtin.file:
+    path: "{{ server_certificate_path }}/{{ item }}"
+    mode: 0400
+  with_items:
+    - ca.pem
+    - server-cert.pem
+    - server-key.pem
+
+- name: Create client key
+  ansible.builtin.command: >
+    openssl genrsa -out {{ server_certificate_path }}/key.pem 4096
+
+- name: Create client CSR
+  ansible.builtin.command: >
+    openssl req -subj '/CN=client' \
+    -new -key {{ server_certificate_path }}/key.pem \
+    -out {{ server_certificate_path }}/client.csr
+
+- name: Create extfile
+  ansible.builtin.copy:
+    src: extfile-client.cnf
+    dest: "{{ server_certificate_path }}/extfile-client.cnf"
+    mode: 0644
+
+- name: Create client certificate
+  ansible.builtin.command: >
+    openssl x509 -req -days 365 -sha256 \
+    -in {{ server_certificate_path }}/client.csr \
+    -CA {{ server_certificate_path }}/ca.pem \
+    -CAkey {{ server_certificate_path }}/ca-key.pem \
+    -CAcreateserial -out {{ server_certificate_path }}/cert.pem \
+    -extfile {{ server_certificate_path }}/extfile-client.cnf \
+    -passin pass:{{ privatekey_passphrase }}
+
+- name: Set file permissions
+  ansible.builtin.file:
+    path: "{{ server_certificate_path }}/{{ item }}"
+    mode: 0444
+  with_items:
+    - ca.pem
+    - cert.pem
+    - key.pem
+
+- name: Create docker service override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    recurse: true
+
+- name: Install docker override file
+  ansible.builtin.template:
+    src: override.conf.j2
+    dest: "/etc/systemd/system/docker.service.d/override.conf"
+    backup: false
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Reload systemd daemon and restart Docker
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+    daemon_reload: true
+
+- name: Cleanup temp files
+  ansible.builtin.file:
+    path: "{{ server_certificate_path }}/{{ item }}"
+    state: absent
+  with_items:
+    - client.csr
+    - extfile-client.cnf
+    - extfile.cnf
+    - server.csr
+    - ca-key.pem
+    - ca.srl

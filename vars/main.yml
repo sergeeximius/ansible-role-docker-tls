@@ -1,0 +1,3 @@
+---
+# vars file for docker-tls
+privatekey_passphrase: "{{ docker_tls.privatekey_passphrase | default('kOM1pYgWCHWwBXZU') }}"

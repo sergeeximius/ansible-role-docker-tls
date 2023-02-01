@@ -1,0 +1,11 @@
+---
+# defaults file for docker-tls
+docker_tls_verify: true
+server_certificate_path: /etc/docker/ssl
+docker_port: 2376
+
+country: RU
+state_or_province: Saratov
+locality: Saratov
+organization: Eximius, LLC
+organizational_unit_name: IT
