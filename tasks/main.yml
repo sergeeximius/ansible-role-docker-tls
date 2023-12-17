@@ -14,7 +14,7 @@
     openssl genrsa -aes256 \
     -passout pass:{{ privatekey_passphrase }} \
     -out {{ server_certificate_path }}/ca-key.pem 4096
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Generate certificate authority certificate
   ansible.builtin.command: >
@@ -23,26 +23,26 @@
     -out {{ server_certificate_path }}/ca.pem \
     -passin pass:{{ privatekey_passphrase }} \
     -subj '/C={{ country }}/ST={{ state_or_province }}/L={{ locality }}/O={{ organization }}/OU={{ organizational_unit_name }}/CN={{ docker_tls.hostname }}'
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create server key
   ansible.builtin.command: >
     openssl genrsa -out {{ server_certificate_path }}/server-key.pem 4096
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create server CSR
   ansible.builtin.command: >
     openssl req -subj '/CN={{ docker_tls.hostname }}' -sha256 \
     -new -key {{ server_certificate_path }}/server-key.pem \
     -out {{ server_certificate_path }}/server.csr
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create extfile
   ansible.builtin.template:
     src: extfile.cnf.j2
     dest: "{{ server_certificate_path }}/extfile.cnf"
     mode: 0644
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create server certificate
   ansible.builtin.command: >
@@ -52,7 +52,7 @@
     -CAcreateserial -out {{ server_certificate_path }}/server-cert.pem \
     -extfile {{ server_certificate_path }}/extfile.cnf \
     -passin pass:{{ privatekey_passphrase }}
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Set file permissions 
   ansible.builtin.file:
@@ -62,26 +62,26 @@
     - ca.pem
     - server-cert.pem
     - server-key.pem
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create client key
   ansible.builtin.command: >
     openssl genrsa -out {{ server_certificate_path }}/key.pem 4096
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create client CSR
   ansible.builtin.command: >
     openssl req -subj '/CN=client' \
     -new -key {{ server_certificate_path }}/key.pem \
     -out {{ server_certificate_path }}/client.csr
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create extfile
   ansible.builtin.copy:
     src: extfile-client.cnf
     dest: "{{ server_certificate_path }}/extfile-client.cnf"
     mode: 0644
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Create client certificate
   ansible.builtin.command: >
@@ -92,7 +92,7 @@
     -CAcreateserial -out {{ server_certificate_path }}/cert.pem \
     -extfile {{ server_certificate_path }}/extfile-client.cnf \
     -passin pass:{{ privatekey_passphrase }}
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Set file permissions
   ansible.builtin.file:
@@ -102,7 +102,7 @@
     - ca.pem
     - cert.pem
     - key.pem
-  when: not docker_tls.copy_certs | bool
+  when: not docker_tls.copy_certs | default(false) | bool
 
 - name: Copy certificates
   ansible.builtin.template:
@@ -114,10 +114,10 @@
     - server-cert.pem
     - server-key.pem
   when:
-    - docker_tls.copy_certs | bool
-    - docker_tls.cert_ca | length > 0
-    - docker_tls.cert_server_cert | length > 0
-    - docker_tls.cert_server_key | length > 0
+    - docker_tls.copy_certs | default(false) | bool
+    - docker_tls.cert_ca | default("") | length > 0
+    - docker_tls.cert_server_cert  | default("") | length > 0
+    - docker_tls.cert_server_key | default("") | length > 0
 
 - name: Create docker service override directory
   ansible.builtin.file:
