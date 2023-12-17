@@ -1,3 +1,3 @@
-subjectAltName = DNS:{{ docker_tls.hostname|default('docker.local') }},IP:{{ ansible_default_ipv4.address }},IP:127.0.0.1{% if docker_tls.vip_ipv4|default(false) %},IP:{{ docker_tls.vip_ipv4 }}{% endif %}
+subjectAltName = DNS:{{ docker_tls.hostname }},IP:{{ ansible_default_ipv4.address }},IP:127.0.0.1{% if docker_tls.vip_ipv4 is defined %},IP:{{ docker_tls.vip_ipv4 }}{% endif %}
 
 extendedKeyUsage = serverAuth

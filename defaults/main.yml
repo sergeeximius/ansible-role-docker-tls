@@ -1,7 +1,8 @@
 ---
 # defaults file for docker-tls
 docker_tls_verify: true
-docker_tls: []
+docker_tls:
+  hostname: docker.local
 server_certificate_path: /etc/docker/ssl
 docker_port: 2376
 
