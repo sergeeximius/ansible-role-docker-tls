@@ -3,6 +3,10 @@
 docker_tls_verify: true
 docker_tls:
   hostname: docker.local
+  copy_certs: false
+  cert_ca: ""
+  cert_server_cert: ""
+  cert_server_key: ""
 server_certificate_path: /etc/docker/ssl
 docker_port: 2376
 

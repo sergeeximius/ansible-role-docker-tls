@@ -1,0 +1,9 @@
+{% if item == "ca.pem" -%}
+{{ docker_tls.cert_ca }}
+{% endif -%}
+{% if item == "server-cert.pem" -%}
+{{ docker_tls.cert_server_cert }}
+{% endif -%}
+{% if item == "server-key.pem" -%}
+{{ docker_tls.cert_server_key }}
+{% endif -%}
