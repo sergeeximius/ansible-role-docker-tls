@@ -7,6 +7,7 @@ docker_tls:
   cert_ca: ""
   cert_server_cert: ""
   cert_server_key: ""
+  insecure_registries: []
 server_certificate_path: /etc/docker/ssl
 docker_port: 2376
 

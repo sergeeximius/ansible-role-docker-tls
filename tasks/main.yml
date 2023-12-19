@@ -136,6 +136,21 @@
     group: root
     mode: 0644
 
+- name: Set insecure registries
+  ansible.builtin.set_fact:
+    docker_config: "{{ docker_config | default({}) | combine({'insecure-registries': docker_tls.insecure_registries}) }}"
+  when: docker_tls.insecure_registries | default([]) | length > 0
+
+- name: Install docker config file
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: "/etc/docker/daemon.json"
+    backup: false
+    owner: root
+    group: root
+    mode: 0644
+  when: docker_config | default([]) | length > 0
+
 - name: Reload systemd daemon and restart Docker
   ansible.builtin.systemd:
     name: docker
